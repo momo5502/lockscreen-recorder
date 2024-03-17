@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Spawner));
             label1 = new Label();
             SuspendLayout();
             // 
@@ -46,6 +47,7 @@
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(367, 74);
             Controls.Add(label1);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             Name = "Spawner";
             Text = "LockScreen Recorder";
