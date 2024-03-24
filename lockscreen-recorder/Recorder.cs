@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO.Pipes;
 using System.Text;
 using System.Windows.Forms;
 
@@ -9,6 +10,7 @@ namespace lockscreen_recorder
         private System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
         private KeyboardHook keyboardHook = new KeyboardHook();
         private Thread? recordingThread = null;
+        private Thread? receiverThread = null;
 
         private DateTime? lastShiftPressed = null;
 
@@ -18,6 +20,8 @@ namespace lockscreen_recorder
             timer.Interval = 300;
             timer.Tick += Timer_Tick;
             timer.Start();
+
+            StartReceiver();
         }
 
         private bool IsRecording()
@@ -75,6 +79,62 @@ namespace lockscreen_recorder
             thread?.Join();
 
             ShowWindow();
+        }
+
+        private void StartReceiver()
+        {
+            if (receiverThread != null)
+            {
+                return;
+            }
+
+            receiverThread = new Thread(ReceiveKillCommand);
+            receiverThread.Start();
+        }
+
+        private void ReceiveKillCommand()
+        {
+            using (NamedPipeServerStream pipeServer = new NamedPipeServerStream("LockscreenRecorderKillPipe", PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous))
+            {
+                while (true)
+                {
+                    var ct = new CancellationTokenSource();
+                    ct.CancelAfter(100);
+
+                    try
+                    {
+                        pipeServer.WaitForConnectionAsync(ct.Token).Wait();
+
+                        BeginInvoke(() =>
+                        {
+                            this.Close();
+                        });
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    lock (this)
+                    {
+                        if (receiverThread == null)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void StopReceiver()
+        {
+            var oldThread = receiverThread;
+            lock (this)
+            {
+                receiverThread = null;
+            }
+
+            oldThread?.Join();
         }
 
         private void ToggleRecording()
@@ -137,6 +197,12 @@ namespace lockscreen_recorder
         {
             timer?.Stop();
             keyboardHook.Cleanup();
+            StopReceiver();
+
+            if (IsRecording())
+            {
+                StopRecording();
+            }
         }
 
         void ReencodeVideo(string infile, string outfile)

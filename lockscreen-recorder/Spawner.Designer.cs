@@ -51,6 +51,7 @@
             MaximizeBox = false;
             Name = "Spawner";
             Text = "LockScreen Recorder";
+            FormClosing += Spawner_FormClosing;
             FormClosed += Spawner_FormClosed;
             Load += Spawner_Load;
             ResumeLayout(false);
